@@ -1,210 +1,295 @@
 /**
- * Facebook → Medium Copier
- * Core Logic
+ * FB ? Medium Copier | Smart Edition
+ * Clean, efficient, user-friendly
  */
 
-const APP_VERSION = '1.0.0';
-const POSTS_PER_PAGE = 10;
+// Config
+const POSTS_PER_PAGE = 50;
+const CHUNK_SIZE = 300;
 
 // State
 let allPosts = [];
 let postedIds = new Set();
 let filteredPosts = [];
+let selectedPostId = null;
 let currentPage = 1;
-let repoConfig = {};
 
-// DOM Elements
-const elements = {
-    totalCount: document.getElementById('totalCount'),
-    postedCount: document.getElementById('postedCount'),
-    pendingCount: document.getElementById('pendingCount'),
-    loadedCount: document.getElementById('loadedCount'),
-    postsList: document.getElementById('postsList'),
-    emptyState: document.getElementById('emptyState'),
-    prevBtn: document.getElementById('prevBtn'),
-    nextBtn: document.getElementById('nextBtn'),
-    pageInfo: document.getElementById('pageInfo'),
-    clipboard: document.getElementById('clipboard'),
-    repoInput: document.getElementById('repoInput'),
-    saveRepoBtn: document.getElementById('saveRepoBtn'),
-    syncStatus: document.getElementById('syncStatus'),
-    dateFilter: document.getElementById('dateFilter'),
-    categoryFilter: document.getElementById('categoryFilter'),
-    minWordsFilter: document.getElementById('minWordsFilter'),
-    minWordsValue: document.getElementById('minWordsValue'),
-    hidePosted: document.getElementById('hidePosted'),
-    refreshBtn: document.getElementById('refreshBtn'),
-    localResetBtn: document.getElementById('localResetBtn'),
-    clearClipboardBtn: document.getElementById('clearClipboardBtn'),
-    modal: document.getElementById('confirmModal'),
-    confirmPostId: document.getElementById('confirmPostId'),
-    confirmPostPreview: document.getElementById('confirmPostPreview'),
-    confirmCancel: document.getElementById('confirmCancel'),
-    confirmOk: document.getElementById('confirmOk'),
-};
+// DOM
+const $ = id => document.getElementById(id);
 
-// ========================================
-// Initialization
-// ========================================
-
+// Init
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-    console.log('🚀 FB → Medium Copier v' + APP_VERSION);
+    showLoading(true);
     
-    // Load saved repo config
-    loadRepoConfig();
+    // Load posted IDs from localStorage
+    loadPostedIds();
     
-    // Set up event listeners
-    setupEventListeners();
+    // Load posts
+    await loadPosts();
     
-    // Load data
-    await loadData();
+    // Setup events
+    setupEvents();
     
-    // Apply initial filters
-    applyFilters();
+    showLoading(false);
+    renderPosts();
+    updateStats();
 }
 
-function setupEventListeners() {
-    // Filters
-    elements.dateFilter.addEventListener('change', () => applyFilters());
-    elements.categoryFilter.addEventListener('change', () => applyFilters());
-    elements.hidePosted.addEventListener('change', () => applyFilters());
-    elements.minWordsFilter.addEventListener('input', (e) => {
-        elements.minWordsValue.textContent = e.target.value;
-        applyFilters();
-    });
-    
-    // Pagination
-    elements.prevBtn.addEventListener('click', () => changePage(-1));
-    elements.nextBtn.addEventListener('click', () => changePage(1));
-    
-    // Actions
-    elements.refreshBtn.addEventListener('click', loadData);
-    elements.localResetBtn.addEventListener('click', resetLocalStorage);
-    elements.clearClipboardBtn.addEventListener('click', () => {
-        elements.clipboard.value = '';
-        showToast('Clipboard cleared', 'info');
-    });
-    
-    // GitHub Sync
-    elements.saveRepoBtn.addEventListener('click', saveRepoConfig);
-    
-    // Modal
-    elements.confirmCancel.addEventListener('click', closeModal);
-    elements.confirmOk.addEventListener('click', confirmMarkPosted);
-    
-    // Close modal on background click
-    elements.modal.addEventListener('click', (e) => {
-        if (e.target === elements.modal) closeModal();
-    });
+function loadPostedIds() {
+    const saved = localStorage.getItem('fb_medium_posted');
+    if (saved) {
+        postedIds = new Set(JSON.parse(saved));
+    }
 }
 
-// ========================================
-// Data Loading
-// ========================================
+function savePostedIds() {
+    localStorage.setItem('fb_medium_posted', JSON.stringify([...postedIds]));
+}
 
-async function loadData() {
-    try {
-        showLoading(true);
-        
-        // Load posts.json
-        const postsResponse = await fetch('posts.json');
-        if (!postsResponse.ok) throw new Error('Failed to load posts.json');
-        allPosts = await postsResponse.json();
-        console.log(`📥 Loaded ${allPosts.length} posts`);
-        
-        // Load posted_ids.json
+// Load posts
+async function loadPosts() {
+    const chunkFiles = [];
+    
+    // Find how many chunks exist (posts_1.json, posts_2.json, etc.)
+    for (let i = 1; i <= 50; i++) {
         try {
-            const postedResponse = await fetch('posted_ids.json');
-            if (postedResponse.ok) {
-                const postedData = await postedResponse.json();
-                postedIds = new Set(postedData.posted || []);
-                console.log(`📥 Loaded ${postedIds.size} posted IDs`);
+            const resp = await fetch(posts_.json);
+            if (!resp.ok) break;
+            const chunk = await resp.json();
+            allPosts.push(...chunk);
+            chunkFiles.push(i);
+        } catch {
+            break;
+        }
+    }
+    
+    // Fallback: load single posts.json
+    if (allPosts.length === 0) {
+        try {
+            const resp = await fetch('posts.json');
+            if (resp.ok) {
+                allPosts = await resp.json();
             }
         } catch (e) {
-            console.log('📥 No posted_ids.json found, starting fresh');
-            postedIds = new Set();
+            console.error('Failed to load posts:', e);
         }
-        
-        updateStats();
-        renderPosts();
-        
-    } catch (error) {
-        console.error('❌ Error loading data:', error);
-        showToast('Failed to load data. Check console for details.', 'error');
-        elements.postsList.innerHTML = `
-            <div class="error-state">
-                <p>❌ Failed to load posts</p>
-                <p class="hint">${error.message}</p>
-                <button class="btn btn-primary" onclick="loadData()">Retry</button>
-            </div>
-        `;
-    } finally {
-        showLoading(false);
     }
+    
+    console.log(Loaded  posts);
 }
 
-function showLoading(show) {
-    if (show) {
-        elements.postsList.innerHTML = '<div class="loading">Loading posts...</div>';
-    }
+// Setup events
+function setupEvents() {
+    // Search
+    searchInput.addEventListener('input', debounce(filterPosts, 300));
+    
+    // Pagination
+    prevBtn.addEventListener('click', () => changePage(-1));
+    nextBtn.addEventListener('click', () => changePage(1));
+    
+    // Preview actions
+    copyBtn.addEventListener('click', copySelectedPost);
+    markPostedBtn.addEventListener('click', markSelectedPosted);
 }
 
-// ========================================
-// Filtering & Pagination
-// ========================================
-
-function applyFilters() {
-    const dateFilter = elements.dateFilter.value;
-    const categoryFilter = elements.categoryFilter.value;
-    const minWords = parseInt(elements.minWordsFilter.value);
-    const hidePosted = elements.hidePosted.checked;
+// Filter posts
+function filterPosts() {
+    const query = searchInput.value.toLowerCase().trim();
+    const activeCategory = document.querySelector('.chip.active')?.dataset.category || 'all';
     
     filteredPosts = allPosts.filter(post => {
-        // Check posted status
-        if (hidePosted && postedIds.has(post.id)) {
-            return false;
-        }
+        // Hide posted
+        if (postedIds.has(post.id)) return false;
         
-        // Check category
-        if (categoryFilter !== 'all' && post.category !== categoryFilter) {
-            return false;
-        }
+        // Category filter
+        if (activeCategory !== 'all' && post.category !== activeCategory) return false;
         
-        // Check word count
-        if (post.word_count < minWords) {
-            return false;
-        }
-        
-        // Check date
-        if (dateFilter !== 'all') {
-            const postYear = new Date(post.date).getFullYear();
-            if (dateFilter === '30') {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                if (new Date(post.date) < thirtyDaysAgo) return false;
-            } else if (dateFilter === '90') {
-                const ninetyDaysAgo = new Date();
-                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                if (new Date(post.date) < ninetyDaysAgo) return false;
-            } else if (dateFilter === '365') {
-                const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                if (new Date(post.date) < oneYearAgo) return false;
-            } else if (!isNaN(parseInt(dateFilter)) && postYear !== parseInt(dateFilter)) {
-                return false;
-            }
+        // Search filter
+        if (query) {
+            const searchable = (post.content + ' ' + post.id + ' ' + post.category).toLowerCase();
+            if (!searchable.includes(query)) return false;
         }
         
         return true;
     });
     
     currentPage = 1;
-    updateStats();
     renderPosts();
+    updateStats();
 }
 
+// Category chips
+function renderCategoryChips() {
+    const counts = {};
+    allPosts.forEach(p => {
+        if (!postedIds.has(p.id)) {
+            counts[p.category] = (counts[p.category] || 0) + 1;
+        }
+    });
+    
+    const categories = [
+        { id: 'all', label: 'All', count: filteredPosts.length },
+        ...Object.entries(counts).map(([id, count]) => ({ id, label: formatCategory(id), count }))
+    ];
+    
+    categoryChips.innerHTML = categories.map(cat => 
+        <div class="chip" data-category="">
+             <span class="chip-count"></span>
+        </div>
+    ).join('');
+    
+    // Category click handlers
+    document.querySelectorAll('.chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            chip.classList.add('active');
+            filterPosts();
+        });
+    });
+}
+
+// Render posts list
+function renderPosts() {
+    renderCategoryChips();
+    
+    const start = (currentPage - 1) * POSTS_PER_PAGE;
+    const end = start + POSTS_PER_PAGE;
+    const pagePosts = filteredPosts.slice(start, start, end);
+    const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
+    
+    // Pagination info
+    paginationInfo.textContent = ${filteredPosts.length} posts;
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+    
+    if (filteredPosts.length === 0) {
+        postsList.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text-muted);">No posts found</div>';
+        return;
+    }
+    
+    postsList.innerHTML = filteredPosts.slice(start, end).map(post => 
+        <div class="post-item" data-id="">
+            <div class="post-item-header">
+                <span class="post-item-date"></span>
+                <span class="post-item-badge "></span>
+            </div>
+            <div class="post-item-title">...</div>
+            <div class="post-item-footer">
+                <span class="post-item-words"> words</span>
+                
+            </div>
+        </div>
+    ).join('');
+    
+    // Click handlers
+    document.querySelectorAll('.post-item').forEach(item => {
+        item.addEventListener('click', () => selectPost(item.dataset.id));
+    });
+}
+
+// Select post
+function selectPost(postId) {
+    selectedPostId = postId;
+    const post = allPosts.find(p => p.id === postId);
+    
+    if (!post) return;
+    
+    // Update selection visual
+    document.querySelectorAll('.post-item').forEach(item => {
+        item.classList.toggle('selected', item.dataset.id === postId);
+    });
+    
+    // Update preview header
+    previewTitle.textContent = formatDate(post.date) + ' � ' + formatCategory(post.category);
+    previewActions.style.display = 'flex';
+    
+    // Render preview
+    previewContent.innerHTML = 
+        <div class="preview-post">
+            <div class="preview-post-meta">
+                <span class="preview-date"></span>
+                <span class="preview-category" style="background:20;color:">
+                    
+                </span>
+                
+            </div>
+            <div class="preview-body"></div>
+            <div class="preview-footer">
+                <span class="preview-stats">ID: </span>
+                
+            </div>
+        </div>
+    ;
+}
+
+// Copy post
+function copySelectedPost() {
+    const post = allPosts.find(p => p.id === selectedPostId);
+    if (!post) return;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(post.content).then(() => {
+        showToast('Copied to clipboard!', 'success');
+    }).catch(() => {
+        // Fallback: select text
+        const textarea = document.createElement('textarea');
+        textarea.value = post.content;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+        showToast('Copied!', 'success');
+    });
+}
+
+// Mark as posted
+function markSelectedPosted() {
+    if (!selectedPostId || postedIds.has(selectedPostId)) return;
+    
+    postedIds.add(selectedPostId);
+    savePostedIds();
+    
+    showToast('Marked as posted!', 'success');
+    
+    // Refresh
+    filterPosts();
+    updateStats();
+    
+    // Clear preview if this was the selected post
+    clearPreview();
+}
+
+// Clear preview
+function clearPreview() {
+    selectedPostId = null;
+    previewTitle.textContent = 'Select a post';
+    previewActions.style.display = 'none';
+    previewContent.innerHTML = 
+        <div class="preview-empty">
+            <div class="preview-empty-icon">??</div>
+            <p>Click on a post to preview it here</p>
+        </div>
+    ;
+}
+
+// Update stats
+function updateStats() {
+    const total = allPosts.length;
+    const posted = postedIds.size;
+    const remaining = total - posted;
+    const percent = total > 0 ? Math.round((posted / total) * 100) : 0;
+    
+    totalPosts.textContent = ${total} Posts;
+    postedCount.textContent = ${posted} Posted;
+    progressPercent.textContent = ${percent}%;
+    progressFill.style.width = ${percent}%;
+    progressText.textContent = ${posted} /  posted;
+    progressPercentText.textContent = ${percent}% complete;
+}
+
+// Change page
 function changePage(direction) {
     const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
     const newPage = currentPage + direction;
@@ -215,329 +300,72 @@ function changePage(direction) {
     }
 }
 
-function updateStats() {
-    elements.totalCount.textContent = allPosts.length;
-    elements.postedCount.textContent = postedIds.size;
-    elements.pendingCount.textContent = allPosts.length - postedIds.size;
-    elements.loadedCount.textContent = `${filteredPosts.length} / ${allPosts.length}`;
-}
-
-// ========================================
-// Rendering
-// ========================================
-
-function renderPosts() {
-    const start = (currentPage - 1) * POSTS_PER_PAGE;
-    const end = start + POSTS_PER_PAGE;
-    const pagePosts = filteredPosts.slice(start, end);
-    const totalPages = Math.ceil(filteredPosts.length / POSTS_PER_PAGE);
-    
-    // Update pagination
-    elements.pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-    elements.prevBtn.disabled = currentPage <= 1;
-    elements.nextBtn.disabled = currentPage >= totalPages;
-    
-    // Show empty state or posts
-    if (filteredPosts.length === 0) {
-        elements.postsList.innerHTML = '';
-        elements.emptyState.style.display = 'block';
-        return;
-    }
-    
-    elements.emptyState.style.display = 'none';
-    
-    elements.postsList.innerHTML = pagePosts.map(post => `
-        <div class="post-card ${postedIds.has(post.id) ? 'posted' : ''}" data-id="${post.id}">
-            <div class="post-header">
-                <span class="post-date">${formatDate(post.date)}</span>
-                <span class="post-category ${post.category}">${formatCategory(post.category)}</span>
-            </div>
-            <div class="post-content">${escapeHtml(post.content)}</div>
-            <div class="post-meta">
-                📏 ${post.word_count} words | 
-                📝 ${post.char_count} chars | 
-                ${post.post_type ? '📌 ' + post.post_type : ''}
-                ${post.has_media === 1 ? ' 🖼️ Has media' : ''}
-            </div>
-            <div class="post-actions">
-                <button class="btn btn-copy btn-small" onclick="copyPost('${post.id}')">📋 Copy</button>
-                <button class="btn btn-mark btn-small" onclick="markPosted('${post.id}')" 
-                        ${postedIds.has(post.id) ? 'disabled' : ''}>
-                    ${postedIds.has(post.id) ? '✅ Posted' : '✓ Mark Posted'}
-                </button>
-                <button class="btn btn-expand btn-small" onclick="toggleExpand(this)">更多...</button>
-                ${postedIds.has(post.id) ? '<span class="post-status">✓ POSTED</span>' : ''}
-            </div>
-        </div>
-    `).join('');
-}
-
-// ========================================
-// Post Actions
-// ========================================
-
-function copyPost(postId) {
-    const post = allPosts.find(p => p.id === postId);
-    if (post) {
-        elements.clipboard.value = post.content;
-        elements.clipboard.focus();
-        elements.clipboard.select();
-        
-        // Try to copy to clipboard API
-        navigator.clipboard.writeText(post.content).then(() => {
-            showToast('Copied to clipboard!', 'success');
-        }).catch(() => {
-            showToast('Content loaded - use Ctrl+A, Ctrl+C to copy', 'info');
-        });
+// Loading
+function showLoading(show) {
+    const overlay = document.querySelector('.loading-overlay');
+    if (overlay) {
+        overlay.style.display = show ? 'flex' : 'none';
     }
 }
 
-function savePostLocally(postId) {
-    const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
-    if (!savedPosts.includes(postId)) {
-        savedPosts.push(postId);
-        localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
-    }
+// Toast
+function showToast(message, type = 'info') {
+    const container = toastContainer;
+    const toast = document.createElement('div');
+    toast.className = 	oast ;
+    toast.textContent = message;
+    container.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 3000);
 }
 
-let pendingPostId = null;
-
-function markPosted(postId) {
-    if (postedIds.has(postId)) {
-        showToast('This post is already marked as posted', 'info');
-        return;
-    }
-    
-    const post = allPosts.find(p => p.id === postId);
-    if (post) {
-        pendingPostId = postId;
-        elements.confirmPostId.textContent = post.id;
-        elements.confirmPostPreview.innerHTML = escapeHtml(post.content.substring(0, 200)) + '...';
-        elements.modal.classList.add('show');
-    }
-}
-
-function confirmMarkPosted() {
-    const postId = pendingPostId;
-    closeModal();
-    pendingPostId = null;
-    
-    if (!postId) return;
-    
-    const post = allPosts.find(p => p.id === postId);
-    if (!post) return;
-    
-    // Add to local set
-    postedIds.add(postId);
-    
-    // Update the post card
-    const card = document.querySelector(`[data-id="${postId}"]`);
-    if (card) {
-        card.classList.add('posted');
-        card.querySelector('.btn-mark').disabled = true;
-        card.querySelector('.btn-mark').textContent = '✅ Posted';
-        card.querySelector('.post-status')?.remove();
-        card.insertAdjacentHTML('beforeend', '<span class="post-status">✓ POSTED</span>');
-    }
-    
-    // Open GitHub Issue
-    openGitHubIssue(post);
-    
-    updateStats();
-}
-
-function closeModal() {
-    elements.modal.classList.remove('show');
-    pendingPostId = null;
-}
-
-function toggleExpand(btn) {
-    const card = btn.closest('.post-card');
-    const isExpanded = card.classList.toggle('expanded');
-    btn.textContent = isExpanded ? '收起 ▲' : '更多...';
-    
-    // Show full content
-    if (isExpanded) {
-        const postId = card.dataset.id;
-        const post = allPosts.find(p => p.id === postId);
-        if (post) {
-            card.querySelector('.post-content').innerHTML = escapeHtml(post.content);
-        }
-    }
-}
-
-// ========================================
-// GitHub Integration
-// ========================================
-
-function openGitHubIssue(post) {
-    const repo = repoConfig.repo || localStorage.getItem('ghRepo');
-    
-    if (!repo) {
-        // Just save locally without GitHub integration
-        savePostedIds();
-        showToast('Marked locally! (Set repo to enable GitHub Issue)', 'info');
-        return;
-    }
-    
-    const title = encodeURIComponent(`[POSTED] ${post.id}`);
-    const body = encodeURIComponent(`
-## Post Marked as Posted
-
-**Post ID:** ${post.id}
-**Date:** ${post.date}
-**Category:** ${post.category}
-**Word Count:** ${post.word_count}
-
----
-
-### Preview
-${post.content.substring(0, 300)}...
-
----
-
-This issue was created automatically by FB → Medium Copier.
-Close this issue to update posted_ids.json via GitHub Actions.
-Reopen this issue to undo the "Mark Posted" action.
-    `.trim());
-    
-    const issueUrl = `https://github.com/${repo}/issues/new?title=${title}&&body=${body}`;
-    
-    // Open in new tab
-    window.open(issueUrl, '_blank');
-    
-    showToast('GitHub Issue opened! Close it to complete the sync.', 'success');
-    
-    // Save locally as backup
-    savePostedIds();
-}
-
-function savePostedIds() {
-    // This would normally sync to GitHub
-    // For now, we just keep it in memory and rely on GitHub Actions
-    console.log('📝 Posted IDs:', Array.from(postedIds));
-}
-
-// ========================================
-// Repo Config
-// ========================================
-
-function loadRepoConfig() {
-    const savedRepo = localStorage.getItem('ghRepo');
-    if (savedRepo) {
-        elements.repoInput.value = savedRepo;
-        elements.syncStatus.textContent = `📂 Configured: ${savedRepo}`;
-        elements.syncStatus.className = 'sync-status success';
-    }
-}
-
-function saveRepoConfig() {
-    const repo = elements.repoInput.value.trim();
-    
-    if (!repo) {
-        elements.syncStatus.textContent = '❌ Please enter a repository';
-        elements.syncStatus.className = 'sync-status error';
-        return;
-    }
-    
-    if (!repo.includes('/')) {
-        elements.syncStatus.textContent = '❌ Use format: username/repo';
-        elements.syncStatus.className = 'sync-status error';
-        return;
-    }
-    
-    localStorage.setItem('ghRepo', repo);
-    elements.syncStatus.textContent = `✓ Saved: ${repo}`;
-    elements.syncStatus.className = 'sync-status success';
-    
-    showToast('Repository saved!', 'success');
-}
-
-// ========================================
-// Local Storage Reset
-// ========================================
-
-function resetLocalStorage() {
-    if (confirm('⚠️ Reset ALL local data?\n\nThis will clear your saved posts, repo config, and reset all posted status.\n\nThis does NOT affect GitHub.')) {
-        localStorage.removeItem('savedPosts');
-        localStorage.removeItem('ghRepo');
-        postedIds = new Set();
-        
-        elements.repoInput.value = '';
-        elements.syncStatus.textContent = '';
-        elements.syncStatus.className = 'sync-status';
-        
-        updateStats();
-        renderPosts();
-        
-        showToast('Local data reset!', 'info');
-    }
-}
-
-// ========================================
-// Utilities
-// ========================================
-
+// Utils
 function formatDate(dateStr) {
+    if (!dateStr) return '';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function formatCategory(category) {
+function formatCategory(cat) {
     const labels = {
         ai_ml: 'AI/ML',
         tech: 'Tech',
         tutorial: 'Tutorial',
         books: 'Books',
         thoughts: 'Thoughts',
-        bengali: 'বাংলা',
+        bengali: '?????',
         general: 'General'
     };
-    return labels[category] || category;
+    return labels[cat] || cat || 'General';
+}
+
+function getCategoryColor(cat) {
+    const colors = {
+        ai_ml: '#7c3aed',
+        tech: '#0284c7',
+        tutorial: '#059669',
+        books: '#d97706',
+        thoughts: '#db2777',
+        bengali: '#4338ca',
+        general: '#64748b'
+    };
+    return colors[cat] || '#64748b';
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
 }
 
-// ========================================
-// Keyboard Shortcuts
-// ========================================
-
-document.addEventListener('keydown', (e) => {
-    // Ctrl+Shift+V to focus clipboard
-    if (e.ctrlKey && e.shiftKey && e.key === 'V') {
-        e.preventDefault();
-        elements.clipboard.focus();
-        elements.clipboard.select();
-    }
-    
-    // Escape to close modal
-    if (e.key === 'Escape' && elements.modal.classList.contains('show')) {
-        closeModal();
-    }
-});
-
-// Export for button onclick handlers
-window.copyPost = copyPost;
-window.markPosted = markPosted;
-window.toggleExpand = toggleExpand;
-window.loadData = loadData;
-window.resetLocalStorage = resetLocalStorage;
+// Expose to global
+window.markSelectedPosted = markSelectedPosted;
