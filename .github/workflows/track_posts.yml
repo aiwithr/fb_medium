@@ -1,0 +1,83 @@
+name: Track Posted Posts
+
+on:
+  issues:
+    types: [closed, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  update-posted-ids:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+
+      - name: Read posted_ids.json
+        id: read-file
+        run: |
+          if [ -f posted_ids.json ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            cat posted_ids.json
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update posted_ids.json
+        run: |
+          # Get post ID from issue title
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          
+          if [[ "$ISSUE_TITLE" == "[POSTED]"* ]]; then
+            POST_ID=$(echo "$ISSUE_TITLE" | sed 's/\[POSTED\] //')
+          else
+            echo "Not a posted issue, skipping"
+            exit 0
+          fi
+          
+          echo "Post ID: $POST_ID"
+          
+          # Check if file exists
+          if [ -f posted_ids.json ]; then
+            # Read existing IDs
+            POSTED_JSON=$(cat posted_ids.json)
+            echo "Current: $POSTED_JSON"
+          else
+            POSTED_JSON='{"posted":[],"updated_at":"","updated_by":""}'
+          fi
+          
+          # Check if this is closing or reopening
+          if [ "${{ github.event.action }}" == "closed" ]; then
+            # Add ID to posted list (if not already there)
+            if ! echo "$POSTED_JSON" | grep -q "\"$POST_ID\""; then
+              NEW_JSON=$(echo "$POSTED_JSON" | jq --arg id "$POST_ID" '.posted += [$id] | .updated_at = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'" | .updated_by = "github-action"')
+              echo "$NEW_JSON" > posted_ids.json
+              echo "✅ Added $POST_ID to posted list"
+            fi
+          else
+            # Remove ID from posted list (reopen)
+            NEW_JSON=$(echo "$POSTED_JSON" | jq --arg id "$POST_ID" '.posted = [.posted[] | select(. != $id)] | .updated_at = "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'" | .updated_by = "github-action"')
+            echo "$NEW_JSON" > posted_ids.json
+            echo "↩️ Removed $POST_ID from posted list"
+          fi
+          
+          echo "---"
+          echo "Final posted_ids.json:"
+          cat posted_ids.json
+
+      - name: Commit and push
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add posted_ids.json
+          git diff --staged
+          git commit -m "🤖 Update posted_ids.json via GitHub Action
+          
+          Triggered by issue: ${{ github.event.issue.html_url }}
+          Action: ${{ github.event.action }}" || echo "No changes to commit"
+          git push

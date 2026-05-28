@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook → Medium Copier</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📋 Facebook → Medium Copier</h1>
+            <p class="subtitle">Browse your Facebook posts and copy to Medium</p>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat">
+                <span class="stat-value" id="totalCount">-</span>
+                <span class="stat-label">Total Posts</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="postedCount">-</span>
+                <span class="stat-label">Posted</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="pendingCount">-</span>
+                <span class="stat-label">To Post</span>
+            </div>
+            <div class="stat">
+                <span class="stat-value" id="loadedCount">-</span>
+                <span class="stat-label">Showing</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <h3>🔧 GitHub Sync</h3>
+                    <p class="sync-info">
+                        Posts marked as "Posted" will open a GitHub Issue for tracking.
+                    </p>
+                    <label class="sync-url-label">
+                        Repository
+                        <input type="text" id="repoInput" placeholder="username/repo" 
+                               value="">
+                    </label>
+                    <button id="saveRepoBtn" class="btn btn-small">Save</button>
+                    <div id="syncStatus" class="sync-status"></div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>📊 Filter</h3>
+                    
+                    <label>
+                        Date
+                        <select id="dateFilter">
+                            <option value="all">All time</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="365">Last year</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Category
+                        <select id="categoryFilter">
+                            <option value="all">All</option>
+                            <option value="ai_ml">AI/ML</option>
+                            <option value="tech">Tech</option>
+                            <option value="tutorial">Tutorial</option>
+                            <option value="books">Books</option>
+                            <option value="thoughts">Thoughts</option>
+                            <option value="bengali">বাংলা</option>
+                            <option value="general">General</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Min Words: <span id="minWordsValue">0</span>
+                        <input type="range" id="minWordsFilter" min="0" max="500" value="0" step="10">
+                    </label>
+
+                    <label>
+                        <input type="checkbox" id="hidePosted" checked>
+                        Hide posted posts
+                    </label>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>🔄 Data</h3>
+                    <button id="refreshBtn" class="btn btn-small">🔄 Refresh</button>
+                    <button id="localResetBtn" class="btn btn-small btn-danger">🗑️ Reset Local</button>
+                </div>
+            </aside>
+
+            <!-- Posts List -->
+            <main class="posts-container">
+                <div class="posts-header">
+                    <h2>📝 Posts</h2>
+                    <div class="pagination">
+                        <button id="prevBtn" class="btn btn-small">⬅️ Prev</button>
+                        <span id="pageInfo">Page 1</span>
+                        <button id="nextBtn" class="btn btn-small">Next ➡️</button>
+                    </div>
+                </div>
+
+                <div id="postsList" class="posts-list">
+                    <div class="loading">Loading posts...</div>
+                </div>
+
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <p>📭 No posts match your filters</p>
+                    <p class="hint">Try adjusting your filters or reset "Hide posted posts"</p>
+                </div>
+            </main>
+        </div>
+
+        <!-- Clipboard Area -->
+        <section class="clipboard-section">
+            <h3>📋 Clipboard</h3>
+            <textarea id="clipboard" placeholder="Click 'Copy' on any post to load content here..."></textarea>
+            <div class="clipboard-actions">
+                <button id="clearClipboardBtn" class="btn">🗑️ Clear</button>
+                <span class="hint">Select all (Ctrl+A) and copy (Ctrl+C) to paste into Medium</span>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>📘 FB → Medium Copier | Static app hosted on GitHub Pages</p>
+            <p class="safety-note">✅ Posts only disappear after you click "Mark Posted" and refresh</p>
+        </footer>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <h3>⚠️ Confirm Mark as Posted</h3>
+            <p>Post ID: <strong id="confirmPostId"></strong></p>
+            <p id="confirmPostPreview"></p>
+            <div class="modal-info">
+                <p>✅ This will open a GitHub Issue</p>
+                <p>✅ Post will STAY VISIBLE until you refresh</p>
+                <p>✅ You can undo this by reopening the issue</p>
+            </div>
+            <div class="modal-actions">
+                <button id="confirmCancel" class="btn">Cancel</button>
+                <button id="confirmOk" class="btn btn-primary">Open GitHub Issue</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
