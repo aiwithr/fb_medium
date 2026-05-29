@@ -22,20 +22,30 @@ function savePosted() {
 }
 
 async function loadPosts() {
-    for (let i = 1; i <= 30; i++) {
+    const maxChunks = 30;
+    let loadedChunks = 0;
+    
+    for (let i = 1; i <= maxChunks; i++) {
         try {
             const r = await fetch('posts_' + i + '.json');
             if (!r.ok) break;
             const c = await r.json();
-            allPosts.push(...c);
-        } catch { break; }
+            if (Array.isArray(c) && c.length > 0) {
+                allPosts.push(...c);
+                loadedChunks++;
+            } else {
+                break;
+            }
+        } catch (e) {
+            console.error('Error loading chunk ' + i + ':', e);
+            break;
+        }
     }
-    if (allPosts.length === 0) {
-        try {
-            const r = await fetch('posts.json');
-            if (r.ok) allPosts = await r.json();
-        } catch {}
-    }
+    
+    // Sort by date descending
+    allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    
+    console.log('Loaded', allPosts.length, 'posts from', loadedChunks, 'chunks');
 }
 
 function setupEvents() {
@@ -44,6 +54,16 @@ function setupEvents() {
     E('nextBtn').addEventListener('click', () => changePage(1));
     E('copyBtn').addEventListener('click', copyPost);
     E('markPostedBtn').addEventListener('click', markPosted);
+    
+    // Keyboard navigation
+    document.addEventListener('keydown', handleKeyboard);
+}
+
+function handleKeyboard(e) {
+    if (e.key === 'Escape') {
+        selected = null;
+        render();
+    }
 }
 
 function filter() {
@@ -96,19 +116,36 @@ function renderList() {
         return;
     }
     
-    E('postsList').innerHTML = filtered.slice(start, end).map(p => 
-        '<div class="post-card' + (p.id === selected ? ' selected' : '') + '" data-id="' + p.id + '">' +
+    E('postsList').innerHTML = filtered.slice(start, end).map(p => {
+        const preview = escHtml(p.content.substring(0, 120));
+        const isPosted = postedIds.has(p.id);
+        const isSelected = p.id === selected;
+        
+        return '<div class="post-card' + (isSelected ? ' selected' : '') + '" ' +
+               'data-id="' + p.id + '" ' +
+               'role="listitem" ' +
+               'tabindex="0" ' +
+               'aria-label="Post from ' + fmtDate(p.date) + ', ' + fmtCat(p.category) + ', ' + (p.word_count || 0) + ' words' + (isPosted ? ', already posted' : '') + '">' +
             '<div class="post-card-header">' +
                 '<span class="post-card-date">' + fmtDate(p.date) + '</span>' +
-                '<span class="post-card-cat ' + p.category + '">' + fmtCat(p.category) + '</span>' +
+                '<span class="post-card-cat ' + (p.category || 'general') + '">' + fmtCat(p.category) + '</span>' +
             '</div>' +
-            '<div class="post-card-text">' + escHtml(p.content.substring(0, 100)) + '</div>' +
-            '<div class="post-card-footer"><span>' + (p.word_count || 0) + ' words</span><span>' + (postedIds.has(p.id) ? 'Posted' : '') + '</span></div>' +
-        '</div>'
-    ).join('');
+            '<div class="post-card-text">' + preview + (p.content.length > 120 ? '...' : '') + '</div>' +
+            '<div class="post-card-footer">' +
+                '<span>' + (p.word_count || 0) + ' words</span>' +
+                '<span>' + (isPosted ? '✓ Posted' : '') + '</span>' +
+            '</div>' +
+        '</div>';
+    }).join('');
     
     E('postsList').querySelectorAll('.post-card').forEach(card => {
         card.addEventListener('click', () => selectPost(card.dataset.id));
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                selectPost(card.dataset.id);
+            }
+        });
     });
 }
 

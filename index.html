@@ -8,55 +8,90 @@
 </head>
 <body>
     <div class="app">
-        <header class="header">
+        <header class="header" role="banner">
             <div class="header-left">
                 <h1>FB to Medium</h1>
                 <p class="header-subtitle">Copy and track your posts</p>
             </div>
-            <div class="header-right">
-                <div class="stat-badge"><span class="stat-num" id="totalPosts">0</span><span class="stat-lbl">Posts</span></div>
-                <div class="stat-badge"><span class="stat-num" id="postedCount">0</span><span class="stat-lbl">Posted</span></div>
+            <div class="header-right" role="status" aria-live="polite">
+                <div class="stat-badge">
+                    <span class="stat-num" id="totalPosts" aria-label="Total posts">0</span>
+                    <span class="stat-lbl">Posts</span>
+                </div>
+                <div class="stat-badge">
+                    <span class="stat-num" id="postedCount" aria-label="Posted count">0</span>
+                    <span class="stat-lbl">Posted</span>
+                </div>
             </div>
         </header>
         <main class="main">
-            <aside class="sidebar">
+            <aside class="sidebar" role="complementary" aria-label="Posts sidebar">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search posts..." autocomplete="off">
+                    <label for="searchInput" class="sr-only">Search posts</label>
+                    <input type="text" id="searchInput" placeholder="Search posts..." autocomplete="off" aria-label="Search posts">
                 </div>
-                <div class="filters" id="categoryFilters"><button class="filter-chip active" data-category="all">All</button></div>
-                <div class="posts-list" id="postsList"></div>
-                <div class="pagination">
-                    <button class="btn-icon" id="prevBtn">&lt;</button>
-                    <span id="pageInfo">Page 1</span>
-                    <button class="btn-icon" id="nextBtn">&gt;</button>
+                <div class="filters" id="categoryFilters" role="group" aria-label="Filter posts by category">
                 </div>
+                <div class="posts-list" id="postsList" role="list" aria-label="Posts list">
+                    <!-- Post cards will be dynamically generated -->
+                </div>
+                <nav class="pagination" aria-label="Posts pagination">
+                    <button class="btn-icon" id="prevBtn" aria-label="Previous page">&lt;</button>
+                    <span id="pageInfo" aria-live="polite">Page 1</span>
+                    <button class="btn-icon" id="nextBtn" aria-label="Next page">&gt;</button>
+                </nav>
             </aside>
-            <section class="content">
+            <section class="content" aria-label="Post preview">
                 <div class="content-header" id="contentHeader">
-                    <div class="post-meta" id="postMeta"></div>
+                    <div class="post-meta" id="postMeta" aria-live="polite"></div>
                     <div class="content-actions" id="contentActions">
-                        <button class="btn btn-copy" id="copyBtn">Copy Text</button>
-                        <button class="btn btn-posted" id="markPostedBtn">Mark as Posted</button>
+                        <button class="btn btn-copy" id="copyBtn" aria-label="Copy post text">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            Copy Text
+                        </button>
+                        <button class="btn btn-posted" id="markPostedBtn" aria-label="Mark this post as posted">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Mark as Posted
+                        </button>
                     </div>
                 </div>
                 <div class="content-body" id="contentBody">
-                    <div class="empty-state">
+                    <div class="empty-state" id="emptyState">
                         <h3>Select a post</h3>
                         <p>Click on any post to preview</p>
                     </div>
                 </div>
             </section>
         </main>
-        <footer class="footer">
+        <footer class="footer" role="contentinfo">
             <div class="progress-wrapper">
                 <span id="progressText">0 / 0 posted</span>
                 <span id="progressPercent">0%</span>
-                <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
             </div>
         </footer>
     </div>
-    <div class="toast-container" id="toastContainer"></div>
-    <div class="loading" id="loading"><div class="spinner"></div><p>Loading posts...</p></div>
+    <div class="toast-container" id="toastContainer" role="alert" aria-live="assertive"></div>
+    <div class="loading" id="loading" aria-busy="true" aria-label="Loading posts">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Loading posts...</p>
+    </div>
+    <style>
+        /* Screen reader only class */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+    </style>
     <script src="app.js"></script>
 </body>
 </html>
