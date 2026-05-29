@@ -1,55 +1,43 @@
-# 📋 Facebook → Medium Copier
+# FB → Medium Copier (GitHub Pages Version)
 
-**Sync your Facebook posts to Medium without losing anything.**
+**Live URL:** https://aiwithr.github.io/fb_medium/  
+**Repository:** github.com/aiwithr/fb_medium  
+**Last Updated:** May 29, 2026
 
-A free, serverless web app that helps you browse your Facebook posts and copy them to Medium. No database, no server, just GitHub Pages + JSON files.
-
-![Status](https://img.shields.io/badge/status-active-brightgreen)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![GitHub Pages](https://img.shields.io/badge/hosting-GitHub%20Pages-blue)
+A completely free, serverless web app to browse Facebook posts and copy content to Medium. Built with pure HTML/CSS/JS, no Python required.
 
 ---
 
-## 🎯 What is this?
+## Features
+- Browse all Facebook posts in one place
+- One-click copy to clipboard
+- Filter by category/date/word count  
+- Safe "Mark Posted" with GitHub Issue tracking
+- Posts never disappear accidentally
 
-If you've been writing on Facebook for years and want to migrate to Medium, this tool helps you:
+## Quick Start
+1. Open: https://aiwithr.github.io/fb_medium/
+2. Click any post to preview
+3. Click "Copy Text" → paste to Medium
+4. Click "Mark as Posted" → confirm → close GitHub Issue → refresh
 
-- 📚 **Browse** all your Facebook posts in one place
-- 📋 **Copy** post content with one click
-- ✅ **Track** what's been posted to Medium
-- 🔒 **Never lose** a post accidentally
+## Local Setup
+```bash
+cd c:\Downloads\fb_medium\fb_to_medium_ghpages
+python -m http.server 8080
+```
 
----
+## Git Commands
+```bash
+git add . && git commit -m "Message" && git push
+```
 
-## 🚀 Quick Start
-
-### 1. Your app is already live!
-
-Navigate to: **`https://YOUR_USERNAME.github.io/fb-medium-copier/`**
-
-> Replace with your actual GitHub username and repository name.
-
-### 2. Browse your posts
-
-- Use the sidebar to filter by **date**, **category**, or **word count**
-- Posts are paginated (10 per page)
-- Click **"📋 Copy"** to load content into the clipboard area
-
-### 3. Paste to Medium
-
-- Select all (Ctrl+A) in the clipboard area
-- Copy (Ctrl+C)
-- Paste into Medium's editor (Ctrl+V)
-
-### 4. Mark as Posted
-
-When you've successfully posted to Medium:
-
-1. Click **"✓ Mark Posted"** on any post
-2. Confirm in the popup dialog
-3. A GitHub Issue opens (keeps audit trail)
-4. Close the issue to complete the sync
-5. Refresh the app to see the post removed from the list
+## Safety Guarantees
+| Action | Result |
+|--------|--------|
+| Browser close | Posts stay visible |
+| App restart | Posts stay visible |
+| Accidental click | Confirmation blocks it |
 
 ---
 
