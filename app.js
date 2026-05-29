@@ -152,14 +152,23 @@ function renderList() {
 function selectPost(id) {
     selected = id;
     const p = allPosts.find(x => x.id === id);
-    if (!p) return;
+    if (!p) {
+        console.error('Post not found:', id);
+        return;
+    }
+    
+    // Hide empty state
+    const emptyState = E('emptyState');
+    if (emptyState) emptyState.style.display = 'none';
     
     E('postsList').querySelectorAll('.post-card').forEach(c => c.classList.remove('selected'));
-    document.querySelector('.post-card[data-id="' + id + '"]')?.classList.add('selected');
+    const card = document.querySelector('.post-card[data-id="' + id + '"]');
+    if (card) card.classList.add('selected');
     
     E('postMeta').innerHTML = '<span>' + fmtDate(p.date) + '</span><span class="preview-cat ' + p.category + '">' + fmtCat(p.category) + '</span><span class="preview-words">' + (p.word_count || 0) + ' words</span>';
     E('contentActions').style.display = 'flex';
     
+    const content = p.content || 'No content available';
     E('contentBody').innerHTML = 
         '<div class="preview-post">' +
             '<div class="preview-meta">' +
@@ -167,12 +176,16 @@ function selectPost(id) {
                 '<span class="preview-cat ' + p.category + '">' + fmtCat(p.category) + '</span>' +
                 '<span class="preview-words">' + (p.word_count || 0) + ' words</span>' +
             '</div>' +
-            '<div class="preview-body">' + escHtml(p.content) + '</div>' +
+            '<div class="preview-body">' + escHtml(content) + '</div>' +
             '<div class="preview-footer">' +
                 '<span class="preview-id">ID: ' + p.id + '</span>' +
-                (postedIds.has(p.id) ? '<span style="color:#059669;font-weight:600;">Posted</span>' : '<button class="preview-btn" onclick="doMarkPosted()">Mark as Posted</button>') +
+                (postedIds.has(p.id) ? '<span style="color:#059669;font-weight:600;">Posted</span>' : '<button class="preview-btn" id="previewMarkBtn">Mark as Posted</button>') +
             '</div>' +
         '</div>';
+    
+    // Attach handler for inline button
+    const inlineBtn = E('previewMarkBtn');
+    if (inlineBtn) inlineBtn.addEventListener('click', doMarkPosted);
 }
 
 function copyPost() {
