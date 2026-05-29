@@ -151,10 +151,11 @@ function renderList() {
 }
 
 function selectPost(id) {
-    console.log('selectPost called with id:', id);
+    console.log('selectPost called with id:', id, typeof id);
     
-    // Find post in allPosts first (always works)
-    const p = allPosts.find(x => x.id === id);
+    // Convert to number for comparison (JSON has numeric ids, dataset returns strings)
+    const numId = Number(id);
+    const p = allPosts.find(x => x.id === numId);
     if (!p) {
         console.error('Post not found in allPosts:', id);
         showToast('Post not found', 'error');
@@ -162,7 +163,7 @@ function selectPost(id) {
     }
     
     // Update selection state
-    selected = id;
+    selected = numId;
     console.log('Selected post:', p.id, p.date ? new Date(p.date).toLocaleDateString() : 'no date');
     const emptyState = E('emptyState');
     if (emptyState) emptyState.style.display = 'none';
@@ -197,7 +198,9 @@ function copyPost() {
     console.log('copyPost called, selected:', selected);
     console.log('allPosts length:', allPosts.length);
     
-    const p = allPosts.find(x => x.id === selected);
+    // Convert to number for comparison
+    const numSelected = Number(selected);
+    const p = allPosts.find(x => x.id === numSelected);
     if (!p) {
         console.error('No post found for selected id:', selected);
         showToast('No post selected', 'error');
@@ -244,7 +247,7 @@ function fallbackCopy(text) {
 
 function markPosted() {
     if (!selected || postedIds.has(selected)) return;
-    postedIds.add(selected);
+    postedIds.add(Number(selected));
     savePosted();
     showToast('Marked as posted!', 'success');
     filter();
@@ -252,7 +255,7 @@ function markPosted() {
 
 function doMarkPosted() {
     if (!selected || postedIds.has(selected)) return;
-    postedIds.add(selected);
+    postedIds.add(Number(selected));
     savePosted();
     showToast('Marked as posted!', 'success');
     selectPost(selected);
