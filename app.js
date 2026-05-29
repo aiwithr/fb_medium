@@ -1,5 +1,6 @@
 const PER_PAGE = 30;
 let allPosts = [], postedIds = new Set(), filtered = [], selected = null, page = 1;
+let activeCategory = 'all', activeYear = 'all';
 const E = id => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', start);
 
@@ -37,13 +38,11 @@ async function loadPosts() {
                 break;
             }
         } catch (e) {
-            console.error('Error loading chunk ' + i + ':', e);
             break;
         }
     }
 
     allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    console.log('Loaded', allPosts.length, 'posts from', loadedChunks, 'chunks');
 }
 
 function setupEvents() {
@@ -64,10 +63,13 @@ function handleKeyboard(e) {
 
 function filter() {
     const q = E('searchInput').value.toLowerCase().trim();
-    const cat = document.querySelector('.filter-chip.active')?.dataset.cat || 'all';
     filtered = allPosts.filter(p => {
         if (postedIds.has(p.id)) return false;
-        if (cat !== 'all' && p.category !== cat) return false;
+        if (activeCategory !== 'all' && p.category !== activeCategory) return false;
+        if (activeYear !== 'all') {
+            const postYear = p.date ? new Date(p.date).getFullYear().toString() : '';
+            if (postYear !== activeYear) return false;
+        }
         if (q && !(p.content + p.id).toLowerCase().includes(q)) return false;
         return true;
     });
@@ -82,17 +84,52 @@ function render() {
 }
 
 function renderFilters() {
+    // Build category counts from filtered (without year filter applied)
     const cats = {};
-    filtered.forEach(p => cats[p.category] = (cats[p.category] || 0) + 1);
-    const html = ['<button class="filter-chip active" data-cat="all">All</button>'];
-    Object.entries(cats).forEach(([k, v]) => {
-        html.push('<button class="filter-chip" data-cat="' + k + '">' + fmtCat(k) + ' (' + v + ')</button>');
+    allPosts.forEach(p => {
+        if (!postedIds.has(p.id)) cats[p.category] = (cats[p.category] || 0) + 1;
     });
-    E('categoryFilters').innerHTML = html.join('');
-    E('categoryFilters').querySelectorAll('.filter-chip').forEach(btn => {
+    
+    // Build year counts
+    const years = {};
+    allPosts.forEach(p => {
+        if (!postedIds.has(p.id)) {
+            const y = p.date ? new Date(p.date).getFullYear().toString() : '';
+            if (y) years[y] = (years[y] || 0) + 1;
+        }
+    });
+    
+    // Category filter
+    const catHtml = ['<button class="filter-chip active" data-cat="all">All</button>'];
+    Object.entries(cats).forEach(([k, v]) => {
+        const active = activeCategory === k ? ' active' : '';
+        catHtml.push('<button class="filter-chip' + active + '" data-cat="' + k + '">' + fmtCat(k) + ' (' + v + ')</button>');
+    });
+    
+    // Year filter
+    const sortedYears = Object.keys(years).sort((a, b) => b - a);
+    const yearHtml = sortedYears.map(y => {
+        const active = activeYear === y ? ' active' : '';
+        return '<button class="filter-chip filter-chip-year' + active + '" data-year="' + y + '">' + y + ' (' + years[y] + ')</button>';
+    });
+    
+    E('categoryFilters').innerHTML = '<div class="filter-section"><div class="filter-section-label">Category</div>' + catHtml.join('') + '</div>';
+    E('categoryFilters').innerHTML += '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>';
+    
+    E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year)').forEach(btn => {
         btn.addEventListener('click', () => {
-            E('categoryFilters').querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year)').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            activeCategory = btn.dataset.cat;
+            filter();
+        });
+    });
+    
+    E('categoryFilters').querySelectorAll('.filter-chip-year').forEach(btn => {
+        btn.addEventListener('click', () => {
+            E('categoryFilters').querySelectorAll('.filter-chip-year').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeYear = btn.dataset.year;
             filter();
         });
     });
@@ -136,9 +173,7 @@ function renderList() {
 
     E('postsList').querySelectorAll('.post-card').forEach(card => {
         const cardId = card.dataset.id;
-        console.log('Attaching click to card:', cardId);
         card.addEventListener('click', () => {
-            console.log('Card clicked:', cardId);
             selectPost(cardId);
         });
         card.addEventListener('keydown', (e) => {
@@ -151,20 +186,16 @@ function renderList() {
 }
 
 function selectPost(id) {
-    console.log('selectPost called with id:', id, typeof id);
-    
     // Convert to number for comparison (JSON has numeric ids, dataset returns strings)
     const numId = Number(id);
     const p = allPosts.find(x => x.id === numId);
     if (!p) {
-        console.error('Post not found in allPosts:', id);
         showToast('Post not found', 'error');
         return;
     }
     
     // Update selection state
     selected = numId;
-    console.log('Selected post:', p.id, p.date ? new Date(p.date).toLocaleDateString() : 'no date');
     const emptyState = E('emptyState');
     if (emptyState) emptyState.style.display = 'none';
     
@@ -195,26 +226,19 @@ function selectPost(id) {
 }
 
 function copyPost() {
-    console.log('copyPost called, selected:', selected);
-    console.log('allPosts length:', allPosts.length);
-    
     // Convert to number for comparison
     const numSelected = Number(selected);
     const p = allPosts.find(x => x.id === numSelected);
     if (!p) {
-        console.error('No post found for selected id:', selected);
         showToast('No post selected', 'error');
         return;
     }
     
-    console.log('Copying post:', p.id);
     const content = p.content || '';
-    console.log('Content length:', content.length);
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(content).then(() => {
             showToast('Copied to clipboard!', 'success');
         }).catch(err => {
-            console.error('Clipboard API failed:', err);
             fallbackCopy(content);
         });
     } else {
@@ -223,7 +247,6 @@ function copyPost() {
 }
 
 function fallbackCopy(text) {
-    console.log('fallbackCopy called with text length:', text ? text.length : 0);
     try {
         const textarea = document.createElement('textarea');
         textarea.value = text;
@@ -233,14 +256,12 @@ function fallbackCopy(text) {
         textarea.select();
         const success = document.execCommand('copy');
         document.body.removeChild(textarea);
-        console.log('execCommand result:', success);
         if (success) {
             showToast('Copied!', 'success');
         } else {
             showToast('Select text manually and copy', 'error');
         }
     } catch (err) {
-        console.error('fallbackCopy error:', err);
         showToast('Copy failed: ' + err.message, 'error');
     }
 }

@@ -18,6 +18,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .filter-chip{padding:0.5rem 1rem;border-radius:20px;font-size:0.8rem;font-weight:500;border:1px solid var(--border);background:transparent;cursor:pointer;transition:all 0.2s;color:var(--text-muted)}
 .filter-chip:hover{border-color:var(--primary);color:var(--primary)}
 .filter-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.filter-section{margin-bottom:8px}
+.filter-section:last-child{margin-bottom:0}
+.filter-section-label{font-size:0.65rem;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;letter-spacing:0.5px}
 .posts-list{flex:1;overflow-y:auto;padding:0.75rem}
 .post-card{padding:1rem;border:2px solid transparent;border-radius:var(--radius);cursor:pointer;margin-bottom:0.75rem;background:var(--bg);transition:all 0.2s}
 .post-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:var(--shadow)}
