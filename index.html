@@ -1,78 +1,62 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FB ? Medium Copier</title>
+    <title>FB to Medium Copier</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app">
-        <!-- Header -->
         <header class="header">
-            <h1>?? FB ? Medium Copier</h1>
-            <div class="header-stats">
-                <span id="totalPosts">0 Posts</span>
-                <span id="postedCount">0 Posted</span>
-                <span id="progressPercent">0%</span>
+            <div class="header-left">
+                <h1>FB to Medium</h1>
+                <p class="header-subtitle">Copy and track your posts</p>
+            </div>
+            <div class="header-right">
+                <div class="stat-badge"><span class="stat-num" id="totalPosts">0</span><span class="stat-lbl">Posts</span></div>
+                <div class="stat-badge"><span class="stat-num" id="postedCount">0</span><span class="stat-lbl">Posted</span></div>
             </div>
         </header>
-
-        <!-- Main Area -->
-        <div class="main-area">
-            <!-- Left: Posts List -->
-            <div class="posts-panel">
-                <div class="search-bar">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search posts...">
-                    <div class="category-row" id="categoryChips"></div>
+        <main class="main">
+            <aside class="sidebar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search posts..." autocomplete="off">
                 </div>
-                <div class="posts-list" id="postsList">
-                    <div class="loading-overlay">
-                        <div class="loading-spinner"></div>
+                <div class="filters" id="categoryFilters"><button class="filter-chip active" data-category="all">All</button></div>
+                <div class="posts-list" id="postsList"></div>
+                <div class="pagination">
+                    <button class="btn-icon" id="prevBtn">&lt;</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button class="btn-icon" id="nextBtn">&gt;</button>
+                </div>
+            </aside>
+            <section class="content">
+                <div class="content-header" id="contentHeader">
+                    <div class="post-meta" id="postMeta"></div>
+                    <div class="content-actions" id="contentActions">
+                        <button class="btn btn-copy" id="copyBtn">Copy Text</button>
+                        <button class="btn btn-posted" id="markPostedBtn">Mark as Posted</button>
                     </div>
                 </div>
-                <div class="pagination-bar">
-                    <span id="paginationInfo">0 results</span>
-                    <div class="preview-actions">
-                        <button class="btn btn-sm btn-outline" id="prevBtn">? Prev</button>
-                        <button class="btn btn-sm btn-outline" id="nextBtn">Next ?</button>
+                <div class="content-body" id="contentBody">
+                    <div class="empty-state">
+                        <h3>Select a post</h3>
+                        <p>Click on any post to preview</p>
                     </div>
                 </div>
-            </div>
-
-            <!-- Right: Preview -->
-            <div class="preview-panel">
-                <div class="preview-header">
-                    <span class="preview-title" id="previewTitle">Select a post</span>
-                    <div class="preview-actions" id="previewActions" style="display:none;">
-                        <button class="btn btn-sm btn-primary" id="copyBtn">?? Copy</button>
-                        <button class="btn btn-sm btn-success" id="markPostedBtn">? Mark Posted</button>
-                    </div>
-                </div>
-                <div class="preview-content" id="previewContent">
-                    <div class="preview-empty">
-                        <div class="preview-empty-icon">??</div>
-                        <p>Click on a post to preview it here</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Progress Footer -->
-        <div class="progress-section">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-            </div>
-            <div class="progress-text">
+            </section>
+        </main>
+        <footer class="footer">
+            <div class="progress-wrapper">
                 <span id="progressText">0 / 0 posted</span>
-                <span id="progressPercentText">0% complete</span>
+                <span id="progressPercent">0%</span>
+                <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
             </div>
-        </div>
+        </footer>
     </div>
-
-    <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
-
+    <div class="loading" id="loading"><div class="spinner"></div><p>Loading posts...</p></div>
     <script src="app.js"></script>
 </body>
 </html>
