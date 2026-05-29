@@ -1,4 +1,4 @@
-﻿const PER_PAGE = 30;
+const PER_PAGE = 30;
 let allPosts = [], postedIds = new Set(), filtered = [], selected = null, page = 1;
 const E = id => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', start);
@@ -24,7 +24,7 @@ function savePosted() {
 async function loadPosts() {
     const maxChunks = 30;
     let loadedChunks = 0;
-    
+
     for (let i = 1; i <= maxChunks; i++) {
         try {
             const r = await fetch('posts_' + i + '.json');
@@ -41,10 +41,8 @@ async function loadPosts() {
             break;
         }
     }
-    
-    // Sort by date descending
+
     allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    
     console.log('Loaded', allPosts.length, 'posts from', loadedChunks, 'chunks');
 }
 
@@ -54,8 +52,6 @@ function setupEvents() {
     E('nextBtn').addEventListener('click', () => changePage(1));
     E('copyBtn').addEventListener('click', copyPost);
     E('markPostedBtn').addEventListener('click', markPosted);
-    
-    // Keyboard navigation
     document.addEventListener('keydown', handleKeyboard);
 }
 
@@ -106,21 +102,21 @@ function renderList() {
     const total = Math.ceil(filtered.length / PER_PAGE) || 1;
     const start = (page - 1) * PER_PAGE;
     const end = start + PER_PAGE;
-    
+
     E('pageInfo').textContent = 'Page ' + page + ' of ' + total;
     E('prevBtn').disabled = page <= 1;
     E('nextBtn').disabled = page >= total;
-    
+
     if (filtered.length === 0) {
         E('postsList').innerHTML = '<div style="padding:2rem;text-align:center;color:#888;">No posts found</div>';
         return;
     }
-    
+
     E('postsList').innerHTML = filtered.slice(start, end).map(p => {
         const preview = escHtml(p.content.substring(0, 120));
         const isPosted = postedIds.has(p.id);
         const isSelected = p.id === selected;
-        
+
         return '<div class="post-card' + (isSelected ? ' selected' : '') + '" ' +
                'data-id="' + p.id + '" ' +
                'role="listitem" ' +
@@ -133,11 +129,11 @@ function renderList() {
             '<div class="post-card-text">' + preview + (p.content.length > 120 ? '...' : '') + '</div>' +
             '<div class="post-card-footer">' +
                 '<span>' + (p.word_count || 0) + ' words</span>' +
-                '<span>' + (isPosted ? '✓ Posted' : '') + '</span>' +
+                '<span>' + (isPosted ? '? Posted' : '') + '</span>' +
             '</div>' +
         '</div>';
     }).join('');
-    
+
     E('postsList').querySelectorAll('.post-card').forEach(card => {
         card.addEventListener('click', () => selectPost(card.dataset.id));
         card.addEventListener('keydown', (e) => {
@@ -150,26 +146,31 @@ function renderList() {
 }
 
 function selectPost(id) {
-    selected = id;
+    const existsInFiltered = filtered.some(p => p.id === id);
+    if (existsInFiltered) {
+        selected = id;
+    } else {
+        selected = null;
+    }
+    
     const p = allPosts.find(x => x.id === id);
     if (!p) {
         console.error('Post not found:', id);
         return;
     }
-    
-    // Hide empty state
+
     const emptyState = E('emptyState');
     if (emptyState) emptyState.style.display = 'none';
     
     E('postsList').querySelectorAll('.post-card').forEach(c => c.classList.remove('selected'));
     const card = document.querySelector('.post-card[data-id="' + id + '"]');
     if (card) card.classList.add('selected');
-    
+
     E('postMeta').innerHTML = '<span>' + fmtDate(p.date) + '</span><span class="preview-cat ' + p.category + '">' + fmtCat(p.category) + '</span><span class="preview-words">' + (p.word_count || 0) + ' words</span>';
     E('contentActions').style.display = 'flex';
-    
+
     const content = p.content || 'No content available';
-    E('contentBody').innerHTML = 
+    E('contentBody').innerHTML =
         '<div class="preview-post">' +
             '<div class="preview-meta">' +
                 '<span class="preview-date">' + fmtDate(p.date) + '</span>' +
@@ -182,16 +183,54 @@ function selectPost(id) {
                 (postedIds.has(p.id) ? '<span style="color:#059669;font-weight:600;">Posted</span>' : '<button class="preview-btn" id="previewMarkBtn">Mark as Posted</button>') +
             '</div>' +
         '</div>';
-    
-    // Attach handler for inline button
+
     const inlineBtn = E('previewMarkBtn');
     if (inlineBtn) inlineBtn.addEventListener('click', doMarkPosted);
 }
 
 function copyPost() {
     const p = allPosts.find(x => x.id === selected);
-    if (!p) return;
-    navigator.clipboard.writeText(p.content).then(() => showToast('Copied!', 'success')).catch(() => showToast('Error', 'error'));
+    if (!p) {
+        showToast('No post selected', 'error');
+        return;
+    }
+    
+    const content = p.content || '';
+    if (!content) {
+        showToast('No content to copy', 'error');
+        return;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(content).then(() => {
+            showToast('Copied to clipboard!', 'success');
+        }).catch(err => {
+            console.error('Clipboard API failed:', err);
+            fallbackCopy(content);
+        });
+    } else {
+        fallbackCopy(content);
+    }
+}
+
+function fallbackCopy(text) {
+    try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const success = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (success) {
+            showToast('Copied to clipboard!', 'success');
+        } else {
+            showToast('Copy failed - try selecting text manually', 'error');
+        }
+    } catch (err) {
+        showToast('Copy failed: ' + err.message, 'error');
+    }
 }
 
 function markPosted() {
@@ -241,5 +280,4 @@ function fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-US', {month:
 function fmtCat(c) { const m = {ai_ml:'AI/ML', tech:'Tech', tutorial:'Tutorial', books:'Books', thoughts:'Thoughts', bengali:'Bengali', general:'General'}; return m[c] || c || 'General'; }
 function escHtml(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 function debounce(f, w) { let t; return () => { clearTimeout(t); t = setTimeout(f, w); }; }
-
 window.doMarkPosted = doMarkPosted;
