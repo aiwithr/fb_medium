@@ -135,7 +135,12 @@ function renderList() {
     }).join('');
 
     E('postsList').querySelectorAll('.post-card').forEach(card => {
-        card.addEventListener('click', () => selectPost(card.dataset.id));
+        const cardId = card.dataset.id;
+        console.log('Attaching click to card:', cardId);
+        card.addEventListener('click', () => {
+            console.log('Card clicked:', cardId);
+            selectPost(cardId);
+        });
         card.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
@@ -146,19 +151,19 @@ function renderList() {
 }
 
 function selectPost(id) {
-    const existsInFiltered = filtered.some(p => p.id === id);
-    if (existsInFiltered) {
-        selected = id;
-    } else {
-        selected = null;
-    }
+    console.log('selectPost called with id:', id);
     
+    // Find post in allPosts first (always works)
     const p = allPosts.find(x => x.id === id);
     if (!p) {
-        console.error('Post not found:', id);
+        console.error('Post not found in allPosts:', id);
+        showToast('Post not found', 'error');
         return;
     }
-
+    
+    // Update selection state
+    selected = id;
+    console.log('Selected post:', p.id, p.date ? new Date(p.date).toLocaleDateString() : 'no date');
     const emptyState = E('emptyState');
     if (emptyState) emptyState.style.display = 'none';
     
@@ -189,18 +194,19 @@ function selectPost(id) {
 }
 
 function copyPost() {
+    console.log('copyPost called, selected:', selected);
+    console.log('allPosts length:', allPosts.length);
+    
     const p = allPosts.find(x => x.id === selected);
     if (!p) {
+        console.error('No post found for selected id:', selected);
         showToast('No post selected', 'error');
         return;
     }
     
+    console.log('Copying post:', p.id);
     const content = p.content || '';
-    if (!content) {
-        showToast('No content to copy', 'error');
-        return;
-    }
-
+    console.log('Content length:', content.length);
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(content).then(() => {
             showToast('Copied to clipboard!', 'success');
@@ -214,21 +220,24 @@ function copyPost() {
 }
 
 function fallbackCopy(text) {
+    console.log('fallbackCopy called with text length:', text ? text.length : 0);
     try {
         const textarea = document.createElement('textarea');
         textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
+        textarea.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;';
         document.body.appendChild(textarea);
+        textarea.focus();
         textarea.select();
         const success = document.execCommand('copy');
         document.body.removeChild(textarea);
+        console.log('execCommand result:', success);
         if (success) {
-            showToast('Copied to clipboard!', 'success');
+            showToast('Copied!', 'success');
         } else {
-            showToast('Copy failed - try selecting text manually', 'error');
+            showToast('Select text manually and copy', 'error');
         }
     } catch (err) {
+        console.error('fallbackCopy error:', err);
         showToast('Copy failed: ' + err.message, 'error');
     }
 }
