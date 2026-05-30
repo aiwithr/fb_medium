@@ -1,6 +1,6 @@
 const PER_PAGE = 30;
 let allPosts = [], postedIds = new Set(), filtered = [], selected = null, page = 1;
-let activeCategory = 'all', activeYear = 'all', showPosted = false, shortOnly = false;
+let activeCategory = 'all', activeYear = 'all', showPosted = false;
 const E = id => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', start);
 
@@ -65,12 +65,13 @@ function filter() {
     const q = E('searchInput').value.toLowerCase().trim();
     filtered = allPosts.filter(p => {
         if (!showPosted && postedIds.has(p.id)) return false;
-        if (activeCategory !== 'all' && p.category !== activeCategory) return false;
+        if (activeCategory !== 'all' && activeCategory !== 'short' && p.category !== activeCategory) return false;
+        // Short category: posts with < 50 words
+        if (activeCategory === 'short' && (!p.word_count || p.word_count >= 50)) return false;
         if (activeYear !== 'all') {
             const postYear = p.date ? new Date(p.date).getFullYear().toString() : '';
             if (postYear !== activeYear) return false;
         }
-        if (shortOnly && (!p.word_count || p.word_count >= 50)) return false;
         if (q && !(p.content + p.id).toLowerCase().includes(q)) return false;
         return true;
     });
@@ -106,8 +107,13 @@ function renderFilters() {
         return p.word_count && p.word_count < 50;
     }).length;
     
-    // Category filter
+    // Category filter (including 'short' as a category)
     const catHtml = ['<button class="filter-chip active" data-cat="all">All</button>'];
+    // Add Short category first
+    if (shortCount > 0) {
+        const active = activeCategory === 'short' ? ' active' : '';
+        catHtml.push('<button class="filter-chip' + active + '" data-cat="short">Short (' + shortCount + ')</button>');
+    }
     Object.entries(cats).forEach(([k, v]) => {
         const active = activeCategory === k ? ' active' : '';
         catHtml.push('<button class="filter-chip' + active + '" data-cat="' + k + '">' + fmtCat(k) + ' (' + v + ')</button>');
@@ -125,14 +131,10 @@ function renderFilters() {
     const showBtnClass = showPosted ? 'filter-chip active' : 'filter-chip';
     const showBtnLabel = 'Posted (' + postedCount + ')';
     
-    // Short posts filter
-    const shortBtnClass = shortOnly ? 'filter-chip active' : 'filter-chip';
-    const shortBtnLabel = '<50 words (' + shortCount + ')';
-    
     E('categoryFilters').innerHTML = 
         '<div class="filter-section"><div class="filter-section-label">Category</div>' + catHtml.join('') + '</div>' +
         '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>' +
-        '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button> <button class="' + shortBtnClass + '" id="shortBtn">' + shortBtnLabel + '</button></div>';
+        '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button></div>';
     
     // Event delegation for all filter chips
     E('categoryFilters').addEventListener('click', (e) => {
@@ -141,12 +143,6 @@ function renderFilters() {
         
         if (btn.id === 'showPostedBtn') {
             showPosted = !showPosted;
-            filter();
-            return;
-        }
-        
-        if (btn.id === 'shortBtn') {
-            shortOnly = !shortOnly;
             filter();
             return;
         }
