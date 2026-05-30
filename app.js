@@ -1,6 +1,6 @@
 const PER_PAGE = 30;
 let allPosts = [], postedIds = new Set(), filtered = [], selected = null, page = 1;
-let activeCategory = 'all', activeYear = 'all', showPosted = false;
+let activeCategory = 'all', activeYear = 'all', showPosted = false, shortOnly = false;
 const E = id => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', start);
 
@@ -70,6 +70,7 @@ function filter() {
             const postYear = p.date ? new Date(p.date).getFullYear().toString() : '';
             if (postYear !== activeYear) return false;
         }
+        if (shortOnly && (!p.word_count || p.word_count >= 50)) return false;
         if (q && !(p.content + p.id).toLowerCase().includes(q)) return false;
         return true;
     });
@@ -99,6 +100,12 @@ function renderFilters() {
         if (y) years[y] = (years[y] || 0) + 1;
     });
     
+    // Count short posts (<50 words)
+    const shortCount = allPosts.filter(p => {
+        if (!showPosted && postedIds.has(p.id)) return false;
+        return p.word_count && p.word_count < 50;
+    }).length;
+    
     // Category filter
     const catHtml = ['<button class="filter-chip active" data-cat="all">All</button>'];
     Object.entries(cats).forEach(([k, v]) => {
@@ -118,10 +125,14 @@ function renderFilters() {
     const showBtnClass = showPosted ? 'filter-chip active' : 'filter-chip';
     const showBtnLabel = 'Posted (' + postedCount + ')';
     
+    // Short posts filter
+    const shortBtnClass = shortOnly ? 'filter-chip active' : 'filter-chip';
+    const shortBtnLabel = '<50 words (' + shortCount + ')';
+    
     E('categoryFilters').innerHTML = 
         '<div class="filter-section"><div class="filter-section-label">Category</div>' + catHtml.join('') + '</div>' +
         '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>' +
-        '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button></div>';
+        '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button> <button class="' + shortBtnClass + '" id="shortBtn">' + shortBtnLabel + '</button></div>';
     
     // Event delegation for all filter chips
     E('categoryFilters').addEventListener('click', (e) => {
@@ -130,6 +141,12 @@ function renderFilters() {
         
         if (btn.id === 'showPostedBtn') {
             showPosted = !showPosted;
+            filter();
+            return;
+        }
+        
+        if (btn.id === 'shortBtn') {
+            shortOnly = !shortOnly;
             filter();
             return;
         }
