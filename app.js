@@ -123,27 +123,29 @@ function renderFilters() {
         '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>' +
         '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button></div>';
     
-    E('showPostedBtn').addEventListener('click', () => {
-        showPosted = !showPosted;
-        filter();
-    });
-    
-    E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year):not(#showPostedBtn)').forEach(btn => {
-        btn.addEventListener('click', () => {
-            E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year):not(#showPostedBtn)').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeCategory = btn.dataset.cat;
+    // Event delegation for all filter chips
+    E('categoryFilters').addEventListener('click', (e) => {
+        const btn = e.target.closest('.filter-chip');
+        if (!btn) return;
+        
+        if (btn.id === 'showPostedBtn') {
+            showPosted = !showPosted;
             filter();
-        });
-    });
-    
-    E('categoryFilters').querySelectorAll('.filter-chip-year').forEach(btn => {
-        btn.addEventListener('click', () => {
+            return;
+        }
+        
+        if (btn.classList.contains('filter-chip-year')) {
             E('categoryFilters').querySelectorAll('.filter-chip-year').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             activeYear = btn.dataset.year;
             filter();
-        });
+            return;
+        }
+        
+        E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year)').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeCategory = btn.dataset.cat;
+        filter();
     });
 }
 
