@@ -1,6 +1,6 @@
 const PER_PAGE = 30;
 let allPosts = [], postedIds = new Set(), filtered = [], selected = null, page = 1;
-let activeCategory = 'all', activeYear = 'all';
+let activeCategory = 'all', activeYear = 'all', showPosted = false;
 const E = id => document.getElementById(id);
 document.addEventListener('DOMContentLoaded', start);
 
@@ -64,7 +64,7 @@ function handleKeyboard(e) {
 function filter() {
     const q = E('searchInput').value.toLowerCase().trim();
     filtered = allPosts.filter(p => {
-        if (postedIds.has(p.id)) return false;
+        if (!showPosted && postedIds.has(p.id)) return false;
         if (activeCategory !== 'all' && p.category !== activeCategory) return false;
         if (activeYear !== 'all') {
             const postYear = p.date ? new Date(p.date).getFullYear().toString() : '';
@@ -84,19 +84,19 @@ function render() {
 }
 
 function renderFilters() {
-    // Build category counts from filtered (without year filter applied)
+    // Build category counts (respecting showPosted)
     const cats = {};
     allPosts.forEach(p => {
-        if (!postedIds.has(p.id)) cats[p.category] = (cats[p.category] || 0) + 1;
+        if (!showPosted && postedIds.has(p.id)) return;
+        cats[p.category] = (cats[p.category] || 0) + 1;
     });
     
-    // Build year counts
+    // Build year counts (respecting showPosted)
     const years = {};
     allPosts.forEach(p => {
-        if (!postedIds.has(p.id)) {
-            const y = p.date ? new Date(p.date).getFullYear().toString() : '';
-            if (y) years[y] = (years[y] || 0) + 1;
-        }
+        if (!showPosted && postedIds.has(p.id)) return;
+        const y = p.date ? new Date(p.date).getFullYear().toString() : '';
+        if (y) years[y] = (years[y] || 0) + 1;
     });
     
     // Category filter
@@ -113,12 +113,24 @@ function renderFilters() {
         return '<button class="filter-chip filter-chip-year' + active + '" data-year="' + y + '">' + y + ' (' + years[y] + ')</button>';
     });
     
-    E('categoryFilters').innerHTML = '<div class="filter-section"><div class="filter-section-label">Category</div>' + catHtml.join('') + '</div>';
-    E('categoryFilters').innerHTML += '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>';
+    // Show/hide posted toggle
+    const postedCount = postedIds.size;
+    const showBtnClass = showPosted ? 'filter-chip active' : 'filter-chip';
+    const showBtnLabel = 'Posted (' + postedCount + ')';
     
-    E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year)').forEach(btn => {
+    E('categoryFilters').innerHTML = 
+        '<div class="filter-section"><div class="filter-section-label">Category</div>' + catHtml.join('') + '</div>' +
+        '<div class="filter-section"><div class="filter-section-label">Year</div><button class="filter-chip filter-chip-year' + (activeYear === 'all' ? ' active' : '') + '" data-year="all">All</button>' + yearHtml.join('') + '</div>' +
+        '<div class="filter-section"><button class="' + showBtnClass + '" id="showPostedBtn">' + showBtnLabel + '</button></div>';
+    
+    E('showPostedBtn').addEventListener('click', () => {
+        showPosted = !showPosted;
+        filter();
+    });
+    
+    E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year):not(#showPostedBtn)').forEach(btn => {
         btn.addEventListener('click', () => {
-            E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year)').forEach(b => b.classList.remove('active'));
+            E('categoryFilters').querySelectorAll('.filter-chip:not(.filter-chip-year):not(#showPostedBtn)').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             activeCategory = btn.dataset.cat;
             filter();
